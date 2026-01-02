@@ -1,8 +1,9 @@
+# Entorno virtual
 venv_ocr/
-__pycache__/
-*.pyc
-.env
-.vscode/
 
-*.pth
-models/
+# Modelo entrenado (~116MB, excede límite GitHub)
+2_CODIGO/models/*.pth
+
+# Cache Python y Jupyter
+__pycache__/
+.ipynb_checkpoints/

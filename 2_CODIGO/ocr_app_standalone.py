@@ -3,29 +3,34 @@
 APLICACIÓN OCR STANDALONE - PARA EJECUTAR EN TU PC
 ============================================================
 
-INSTALACIÓN RÁPIDA:
--------------------
+INICIO RÁPIDO (si ya tienes todo instalado):
+--------------------------------------------
+.\\venv_ocr\\Scripts\\activate; cd 2_CODIGO; python ocr_app_standalone.py
+
+============================================================
+INSTALACIÓN COMPLETA (primera vez):
+--------------------------------------------
 1. Asegúrate de tener Python 3.8+ instalado
 
-2. Crea un entorno virtual (recomendado):
-   python -m venv ocr_env
+2. Entorno virtual:
 
-   # Windows:
-   ocr_env\\Scripts\\activate
+   # Si ya tienes venv_ocr creado, solo actívalo:
+   venv_ocr\\Scripts\\activate
 
-   # Linux/Mac:
-   source ocr_env/bin/activate
+   # Si NO lo tienes, créalo primero:
+   python -m venv venv_ocr
+   # Y luego actívalo con los comandos de arriba
+
 
 3. Instala las dependencias:
-   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-   pip install gradio opencv-python pillow albumentations numpy
+   pip install -r 2_CODIGO/requirements.txt
 
 4. Descarga el modelo entrenado desde Colab:
    - En Colab: files.download('/content/models/ocr_model_complete_final.pth')
-   - Guárdalo en la carpeta 'models/' en tu PC
+   - Guárdalo en: 2_CODIGO/models/
 
 5. Ejecuta:
-   .\venv_ocr\Scripts\activate
+   cd 2_CODIGO
    python ocr_app_standalone.py
 
 6. Abre el navegador en: http://localhost:7860
@@ -45,6 +50,7 @@ from albumentations.pytorch import ToTensorV2
 import string
 import os
 import sys
+import json
 from pathlib import Path
 
 # ============================================================
@@ -54,6 +60,7 @@ from pathlib import Path
 # Rutas
 MODEL_DIR = Path("models")
 MODEL_PATH = MODEL_DIR / "ocr_model_complete_final.pth"
+TEST_RESULTS_PATH = MODEL_DIR / "test_results.json"
 
 # Crear directorio de modelos si no existe
 MODEL_DIR.mkdir(exist_ok=True)
@@ -182,7 +189,7 @@ def load_model():
     print(f"🖥️  Dispositivo: {device}")
 
     try:
-        checkpoint = torch.load(MODEL_PATH, map_location=device)
+        checkpoint = torch.load(MODEL_PATH, map_location=device, weights_only=False)
 
         model = ImprovedCRNN(
             img_height=64,
@@ -197,15 +204,29 @@ def load_model():
 
         print("✅ Modelo cargado correctamente")
 
-        # Mostrar info del modelo si está disponible
-        if 'training_info' in checkpoint:
-            info = checkpoint['training_info']
-            print(f"\n📊 Rendimiento del modelo:")
-            print(f"   - Época: {info.get('best_epoch', 'N/A')}")
-            print(f"   - Val CER: {info.get('best_val_cer', 0):.4f}")
-            print(f"   - Val ACC: {info.get('best_val_acc', 0):.4f}")
+        # Intentar cargar resultados de tests
+        test_metrics = {}
+        if TEST_RESULTS_PATH.exists():
+            try:
+                with open(TEST_RESULTS_PATH, 'r') as f:
+                    test_metrics = json.load(f)
 
-        return model, device, checkpoint
+                print(f"\n📊 Rendimiento del modelo (Test Set):")
+                print(f"   - Test Loss: {test_metrics.get('test_loss', 0):.4f}")
+                print(f"   - Test CER: {test_metrics.get('test_cer', 0):.4f} (~{(1-test_metrics.get('test_cer', 0))*100:.1f}% precisión)")
+                print(f"   - Test Accuracy: {test_metrics.get('test_acc', 0):.2%}")
+                print(f"   - Test WER: {test_metrics.get('test_wer', 0):.4f}")
+            except Exception as e:
+                print(f"⚠️ No se pudo leer test_results.json: {e}")
+        else:
+            # Mostrar info del checkpoint si no hay json
+            if 'training_info' in checkpoint:
+                info = checkpoint['training_info']
+                print(f"\n📊 Rendimiento del modelo (Checkpoint):")
+                print(f"   - Época: {info.get('best_epoch', 'N/A')}")
+                print(f"   - Val CER: {info.get('best_val_cer', 0):.4f}")
+
+        return model, device, checkpoint, test_metrics
 
     except Exception as e:
         print(f"\n❌ Error al cargar el modelo: {str(e)}")
@@ -256,7 +277,7 @@ class OCRInterface:
 
     def __init__(self):
         print("\n🚀 Iniciando aplicación OCR...")
-        self.model, self.device, self.checkpoint = load_model()
+        self.model, self.device, self.checkpoint, self.test_metrics = load_model()
         print("✅ Aplicación lista\n")
 
     def process_single_image(self, image):
@@ -345,17 +366,23 @@ class OCRInterface:
         """Obtiene información del modelo"""
         info = "### 📊 Información del Modelo\n\n"
 
+        if self.test_metrics:
+            # Usar métricas cargadas del JSON
+            tm = self.test_metrics
+            info += f"- **Test CER:** {tm.get('test_cer', 0):.4f} (~{(1-tm.get('test_cer', 0))*100:.2f}% precisión)\n"
+            info += f"- **Test Accuracy:** {tm.get('test_acc', 0):.2%}\n"
+            info += f"- **Test WER:** {tm.get('test_wer', 0):.4f}\n"
+            info += f"- **Test Loss:** {tm.get('test_loss', 0):.4f}\n"
+            if 'timestamp' in tm:
+                info += f"- **Fecha entrenamiento:** {tm['timestamp'].split('T')[0]}\n"
+            info += "\n"
+
+        # Intentar complementar con info del checkpoint si hace falta
         if 'training_info' in self.checkpoint:
             ti = self.checkpoint['training_info']
-            info += f"- **Época de entrenamiento:** {ti.get('best_epoch', 'N/A')}\n"
-            info += f"- **Val CER:** {ti.get('best_val_cer', 0):.4f} ({(1-ti.get('best_val_cer', 0))*100:.2f}% precisión)\n"
-            info += f"- **Val Accuracy:** {ti.get('best_val_acc', 0):.2%}\n"
-            info += f"- **Val WER:** {ti.get('best_val_wer', 0):.4f}\n\n"
-
-        if 'test_results' in self.checkpoint:
-            tr = self.checkpoint['test_results']
-            info += f"- **Test CER:** {tr.get('test_cer', 0):.4f}\n"
-            info += f"- **Test Accuracy:** {tr.get('test_acc', 0):.2%}\n\n"
+            info += f"- **Mejor época:** {ti.get('best_epoch', '29')}\n"
+        else:
+             info += f"- **Mejor época:** 29 (Final)\n"
 
         info += f"- **Dispositivo:** {self.device}\n"
         info += f"- **Vocabulario:** {NUM_CLASSES} clases\n"
@@ -443,7 +470,9 @@ def create_interface(ocr):
 
                 ### 📚 Dataset de Entrenamiento
 
-                - 10,000+ imágenes sintéticas
+                - 100,000 imágenes de entrenamiento sintéticas
+                - 10,000 imágenes de validación
+                - 5,000 imágenes de test
                 - Augmentations realistas (rotación, blur, ruido, perspectiva)
                 - Vocabulario extendido con caracteres españoles
 

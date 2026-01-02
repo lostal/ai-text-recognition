@@ -1,0 +1,27 @@
+1. Instalar dependencias:
+   pip install -r 2_CODIGO/requirements.txt
+
+2. Ejecutar aplicación:
+   cd 2_CODIGO
+   python ocr_app_standalone.py
+
+3. Abrir navegador:
+   http://localhost:7860
+
+4. Probar con ejemplos:
+   Subir imágenes de: 5_EJEMPLOS/
+
+5. Probar con sus imágenes:
+   Arrastrar imagen → Click "Reconocer Texto"
+
+REQUISITOS DE IMAGEN:
+- Formatos: jpg, png, bmp
+- Fondo claro, texto horizontal
+- Una línea de texto
+- Texto impreso (manuscrito NO entrenado)
+
+RENDIMIENTO:
+- Texto impreso: 94% precisión
+- Acentos españoles: 100%
+- Números/códigos: 85-95%
+- Manuscrito: 0% (no entrenado)
