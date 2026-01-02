@@ -26,7 +26,7 @@ INSTALACIÓN COMPLETA (primera vez):
    pip install -r 2_CODIGO/requirements.txt
 
 4. Descarga el modelo entrenado desde Colab:
-   - En Colab: files.download('/content/models/ocr_model_complete_final.pth')
+   - En Colab: files.download('/content/models/ocr_model_printed_final.pth')
    - Guárdalo en: 2_CODIGO/models/
 
 5. Ejecuta:
@@ -59,8 +59,8 @@ from pathlib import Path
 
 # Rutas
 MODEL_DIR = Path("models")
-MODEL_PATH = MODEL_DIR / "ocr_model_complete_final.pth"
-TEST_RESULTS_PATH = MODEL_DIR / "test_results.json"
+MODEL_PATH = MODEL_DIR / "ocr_model_printed_final.pth"
+TEST_RESULTS_PATH = MODEL_DIR / "test_results_printed.json"
 
 # Crear directorio de modelos si no existe
 MODEL_DIR.mkdir(exist_ok=True)
@@ -177,7 +177,7 @@ def load_model():
         print("\n📥 DESCARGA EL MODELO:")
         print("   1. En Google Colab, ejecuta:")
         print("      from google.colab import files")
-        print("      files.download('/content/models/ocr_model_complete_final.pth')")
+        print("      files.download('/content/models/ocr_model_printed_final.pth')")
         print("\n   2. Guarda el archivo en la carpeta 'models/' de este proyecto")
         print("\n   3. Vuelve a ejecutar este script")
         print("="*70 + "\n")
@@ -393,7 +393,7 @@ class OCRInterface:
 def create_interface(ocr):
     """Crea la interfaz de Gradio"""
 
-    with gr.Blocks(title="OCR - Reconocimiento de Texto", theme=gr.themes.Soft()) as app:
+    with gr.Blocks(title="OCR - Reconocimiento de Texto") as app:
 
         gr.Markdown("""
         # 📝 Sistema OCR - Reconocimiento de Texto
@@ -529,7 +529,8 @@ def main():
         server_name="0.0.0.0",  # Permite acceso desde red local
         server_port=7860,
         share=False,  # Cambia a True para link público
-        show_error=True
+        show_error=True,
+        theme=gr.themes.Soft()  # Tema visual de la aplicación
     )
 
 if __name__ == "__main__":
