@@ -328,9 +328,6 @@ class DualOCRInterface:
     """Interfaz para ambos modelos (impreso + manuscrito)"""
 
     def __init__(self):
-        print("\n🚀 Iniciando aplicación OCR DUAL...")
-        print("="*70)
-
         # Cargar modelo impreso
         self.model_printed, self.device, self.checkpoint_printed, self.metrics_printed = \
             load_model(PRINTED_MODEL_PATH, "printed")
@@ -341,11 +338,8 @@ class DualOCRInterface:
 
         # Verificar que al menos un modelo cargó
         if self.model_printed is None and self.model_handwriting is None:
-            print("\n❌ ERROR CRÍTICO: No se pudo cargar ningún modelo")
+            print("\nERROR: No se pudo cargar ningún modelo")
             sys.exit(1)
-
-        print("="*70)
-        print("✅ Aplicación lista\n")
 
     def process_single_image(self, image, model_type):
         """
@@ -441,8 +435,8 @@ class DualOCRInterface:
 
         return result
 
-    def process_batch(self, files, model_type):
-        """Procesa múltiples imágenes con el modelo seleccionado"""
+    def process_batch(self, files, model_type, progress=gr.Progress()):
+        """Procesa múltiples imágenes con barra de progreso"""
 
         if not files:
             return "❌ No se cargaron imágenes"
@@ -455,23 +449,25 @@ class DualOCRInterface:
 
         results = []
         emoji = "🖨️" if model_type == "Texto Impreso" else "✍️"
+        total = len(files)
 
-        results.append(f"## {emoji} Procesando con: {model_type}\n\n")
+        results.append(f"## {emoji} Resultados: {model_type}\n\n")
+        results.append(f"**Total procesadas:** {total} imágenes\n\n")
 
-        for idx, file in enumerate(files, 1):
+        for idx, file in enumerate(progress.tqdm(files, desc="🔍 Procesando imágenes...")):
             try:
                 image = Image.open(file).convert('RGB')
                 text, conf = predict_image(np.array(image), model, self.device)
 
                 conf_icon = "✅" if conf > 0.8 else "⚠️" if conf > 0.5 else "❌"
                 results.append(
-                    f"**{idx}. {Path(file.name).name}** {conf_icon}\n"
+                    f"**{idx+1}. {Path(file.name).name}** {conf_icon}\n"
                     f"   📝 Texto: `{text}`\n"
                     f"   📊 Confianza: {conf:.1%}\n"
                 )
             except Exception as e:
                 results.append(
-                    f"**{idx}. {Path(file.name).name}** ❌\n"
+                    f"**{idx+1}. {Path(file.name).name}** ❌\n"
                     f"   Error: {str(e)}\n"
                 )
 
@@ -483,46 +479,44 @@ class DualOCRInterface:
         if model_type == "Texto Impreso":
             metrics = self.metrics_printed
             checkpoint = self.checkpoint_printed
-            emoji = "🖨️"
             dataset = "100,000 imágenes sintéticas"
             strategy = "Generación sintética con variaciones tipográficas"
         else:
             metrics = self.metrics_handwriting
             checkpoint = self.checkpoint_handwriting
-            emoji = "✍️"
             dataset = "96,456 palabras manuscritas (IAM Database)"
             strategy = "Transfer Learning desde modelo impreso"
 
         if not metrics:
-            return f"### {emoji} {model_type}\n\n❌ Modelo no disponible"
+            return f"### {model_type}\n\nModelo no disponible"
 
-        info = f"### {emoji} {model_type}\n\n"
-        info += "#### 📊 Métricas de Evaluación (Test Set)\n\n"
+        info = f"### {model_type}\n\n"
+        info += "#### Métricas de Evaluación (Test Set)\n\n"
 
         cer = metrics.get('test_cer', 0)
         acc = metrics.get('test_acc', 0)
         wer = metrics.get('test_wer', 0)
         loss = metrics.get('test_loss', 0)
 
-        info += f"- **Test CER:** {cer:.4f} → **{(1-cer)*100:.2f}% precisión** ✅\n"
-        info += f"- **Test Accuracy:** {acc:.2%} (palabras exactas correctas)\n"
+        info += f"- **Test CER:** {cer:.4f} → **{(1-cer)*100:.2f}% precisión**\n"
+        info += f"- **Test Accuracy:** {acc:.2%} (palabras exactas)\n"
         info += f"- **Test WER:** {wer:.4f}\n"
         info += f"- **Test Loss:** {loss:.4f}\n\n"
 
-        info += "#### 📚 Dataset de Entrenamiento\n\n"
+        info += "#### Dataset de Entrenamiento\n\n"
         info += f"- {dataset}\n"
         info += f"- Estrategia: {strategy}\n"
-        info += f"- Augmentations: Rotación, blur, ruido, perspectiva, elastic\n\n"
+        info += f"- Augmentations: Rotación, blur, ruido, perspectiva\n\n"
 
         if 'total_samples' in metrics:
             info += f"- **Muestras test:** {metrics['total_samples']:,}\n"
             info += f"- **Correctas:** {metrics.get('correct', 0):,}\n\n"
 
-        info += "#### ⚙️ Arquitectura\n\n"
-        info += "- **Modelo:** CRNN (Convolutional Recurrent Neural Network)\n"
-        info += "- **CNN:** 5 bloques convolucionales (extracción características)\n"
-        info += "- **RNN:** 3 capas LSTM bidireccionales (modelado secuencias)\n"
-        info += "- **CTC Loss:** Alineación automática texto-imagen\n"
+        info += "#### Arquitectura\n\n"
+        info += "- **Modelo:** CRNN\n"
+        info += "- **CNN:** 5 bloques convolucionales\n"
+        info += "- **RNN:** 3 capas LSTM bidireccionales\n"
+        info += "- **CTC Loss:** Alineación automática\n"
         info += "- **Parámetros:** ~22M entrenables\n"
 
         return info
@@ -530,9 +524,9 @@ class DualOCRInterface:
     def get_comparison(self):
         """Comparativa entre ambos modelos"""
 
-        info = "### ⚖️ Comparativa de Modelos\n\n"
-        info += "| Característica | Texto Impreso 🖨️ | Texto Manuscrito ✍️ |\n"
-        info += "|----------------|-------------------|----------------------|\n"
+        info = "### Comparativa de Modelos\n\n"
+        info += "| Característica | Texto Impreso | Texto Manuscrito |\n"
+        info += "|----------------|---------------|------------------|\n"
 
         if self.metrics_printed and self.metrics_handwriting:
             p_cer = self.metrics_printed.get('test_cer', 0)
@@ -546,37 +540,59 @@ class DualOCRInterface:
 
         info += "| **Dataset** | 100k sintéticas | 96k IAM reales |\n"
         info += "| **Estrategia** | Desde cero | Transfer Learning |\n"
-        info += "| **Velocidad** | Muy rápida | Rápida |\n"
         info += "| **Uso ideal** | Documentos, libros | Notas, formularios |\n\n"
 
-        info += "### 🎯 Recomendaciones de Uso\n\n"
-        info += "**🖨️ Usa Texto Impreso para:**\n"
-        info += "- Documentos escaneados\n"
-        info += "- Libros y revistas\n"
-        info += "- Títulos y encabezados\n"
-        info += "- PDFs convertidos a imagen\n"
-        info += "- Carteles y señales\n\n"
-
-        info += "**✍️ Usa Texto Manuscrito para:**\n"
-        info += "- Notas escritas a mano\n"
-        info += "- Formularios completados\n"
-        info += "- Apuntes de clase\n"
-        info += "- Cartas y documentos históricos\n"
-        info += "- Firmas y anotaciones\n"
+        info += "### Recomendaciones de Uso\n\n"
+        info += "**Texto Impreso:** Documentos escaneados, libros, revistas, carteles, PDFs\n\n"
+        info += "**Texto Manuscrito:** Notas a mano, formularios, apuntes, cartas, anotaciones\n"
 
         return info
 
 def create_interface(ocr):
-    """Crea la interfaz de Gradio completa"""
+    """Crea la interfaz de Gradio con mejoras UI/UX"""
+
+    # ========================================
+    # TEMA - Solo ajustes sutiles
+    # ========================================
+    custom_theme = gr.themes.Soft(
+        primary_hue="blue",
+        font=("Inter", "system-ui", "sans-serif"),
+    )
+
+    # ========================================
+    # CSS PERSONALIZADO (mínimo)
+    # ========================================
+    custom_css = """
+    /* Badges de estado */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .badge-printed { background: #387fc0; color: white; }
+    .badge-handwriting { background: #10b981; color: white; }
+    .badge-device { background: #6b7280; color: white; }
+
+    /* Footer */
+    .footer-text {
+        text-align: center;
+        color: #6b7280;
+        font-size: 0.9em;
+        padding: 12px;
+        margin-top: 20px;
+    }
+    """
 
     with gr.Blocks(title="OCR Dual - Impreso + Manuscrito") as app:
 
         gr.Markdown("""
-        # 📝 Sistema OCR Dual - Reconocimiento de Texto
+        # 📝 Sistema OCR Dual
 
-        **Dos modelos especializados:** Texto Impreso (94% precisión) + Texto Manuscrito (90% precisión)
-
-        Entrenados con Deep Learning (CRNN + CTC Loss) para reconocimiento óptimo de texto
+        **Proyecto Final de Inteligencia Artificial** — Reconocimiento óptico de caracteres
         """)
 
         with gr.Tabs():
@@ -584,70 +600,63 @@ def create_interface(ocr):
             # ========================================
             # TAB 1: Imagen Individual
             # ========================================
-            with gr.Tab("📷 Imagen Individual"):
+            with gr.Tab("📷 Reconocimiento"):
                 with gr.Row():
                     with gr.Column(scale=1):
                         input_img = gr.Image(
                             label="Sube tu imagen",
                             type="numpy",
-                            height=350
+                            height=320
                         )
 
                         model_selector = gr.Radio(
                             choices=["Texto Impreso", "Texto Manuscrito"],
                             value="Texto Impreso",
-                            label="🎯 Selecciona el tipo de texto",
-                            info="Elige el modelo adecuado para tu imagen"
+                            label="Tipo de texto",
+                            info="Selecciona según el contenido de tu imagen"
                         )
 
                         btn_process = gr.Button(
-                            "🔍 Reconocer Texto",
+                            "Reconocer Texto",
                             variant="primary",
                             size="lg"
                         )
 
-                        gr.Markdown("""
-                        ### 💡 Consejos para mejores resultados:
+                        with gr.Accordion("Consejos para mejores resultados", open=False):
+                            gr.Markdown("""
+                            **Requisitos de imagen:**
+                            - Buena iluminación uniforme
+                            - Texto horizontal (máx ±5° inclinación)
+                            - Alto contraste texto-fondo
+                            - Resolución mínima 300 DPI
 
-                        **General:**
-                        - 📸 Buena iluminación uniforme
-                        - 🎯 Texto horizontal (máx ±5° inclinación)
-                        - 🖼️ Alto contraste texto-fondo
-                        - 📏 Resolución mínima 300 DPI
-
-                        **Texto Impreso 🖨️:**
-                        - Documentos escaneados
-                        - Libros y revistas
-                        - Carteles y señales
-
-                        **Texto Manuscrito ✍️:**
-                        - Letra clara y legible
-                        - Palabras separadas
-                        - Sin cursiva muy estilizada
-                        """)
+                            **Texto Impreso:** Documentos, libros, carteles
+                            **Manuscrito:** Notas, formularios, apuntes
+                            """)
 
                     with gr.Column(scale=1):
                         output_text = gr.Textbox(
-                            label="✍️ Texto Reconocido",
-                            lines=8
+                            label="Texto Reconocido",
+                            lines=6,
+                            placeholder="El texto reconocido aparecerá aquí..."
                         )
 
-                        with gr.Row():
-                            output_conf = gr.Textbox(
-                                label="📊 Confianza",
-                                lines=1,
-                                scale=1
-                            )
+                        output_conf = gr.Textbox(
+                            label="Confianza",
+                            lines=1
+                        )
 
                         output_img = gr.Image(
-                            label="🖼️ Resultado Anotado",
-                            height=350
+                            label="Resultado Anotado",
+                            height=300
                         )
 
                         output_info = gr.Textbox(
-                            label="ℹ️ Información",
+                            label="Información",
                             lines=1
                         )
+
+                gr.Markdown("*Hay imágenes de prueba disponibles en la carpeta `5_EJEMPLOS/`*")
 
                 btn_process.click(
                     fn=ocr.process_single_image,
@@ -658,35 +667,38 @@ def create_interface(ocr):
             # ========================================
             # TAB 2: Procesamiento por Lotes
             # ========================================
-            with gr.Tab("📚 Procesamiento por Lotes"):
+            with gr.Tab("📚 Lotes"):
                 gr.Markdown("""
-                ### Procesa múltiples imágenes a la vez
+                ### Procesa múltiples imágenes
 
-                Ideal para digitalizar documentos, notas de clase o colecciones de imágenes
+                Ideal para digitalizar documentos o colecciones de imágenes.
+                Puedes usar las imágenes de prueba en `5_EJEMPLOS/`.
                 """)
 
-                batch_model = gr.Radio(
-                    choices=["Texto Impreso", "Texto Manuscrito"],
-                    value="Texto Impreso",
-                    label="🎯 Selecciona el modelo"
-                )
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        batch_model = gr.Radio(
+                            choices=["Texto Impreso", "Texto Manuscrito"],
+                            value="Texto Impreso",
+                            label="Modelo a utilizar"
+                        )
 
-                batch_input = gr.File(
-                    label="📁 Selecciona múltiples imágenes",
-                    file_count="multiple",
-                    file_types=["image"]
-                )
+                        batch_input = gr.File(
+                            label="Selecciona imágenes",
+                            file_count="multiple",
+                            file_types=["image"]
+                        )
 
-                batch_btn = gr.Button(
-                    "🔍 Procesar Todas",
-                    variant="primary",
-                    size="lg"
-                )
+                        batch_btn = gr.Button(
+                            "Procesar Todas",
+                            variant="primary",
+                            size="lg"
+                        )
 
-                batch_output = gr.Markdown(
-                    label="Resultados",
-                    value="*Los resultados aparecerán aquí*"
-                )
+                    with gr.Column(scale=1):
+                        batch_output = gr.Markdown(
+                            value="*Los resultados aparecerán aquí tras el procesamiento*"
+                        )
 
                 batch_btn.click(
                     fn=ocr.process_batch,
@@ -695,195 +707,97 @@ def create_interface(ocr):
                 )
 
             # ========================================
-            # TAB 3: Información Modelo Impreso
+            # TAB 3: Información Técnica (Consolidada)
             # ========================================
-            with gr.Tab("ℹ️ Modelo Impreso 🖨️"):
-                printed_info = gr.Markdown(
-                    value=ocr.get_model_info("Texto Impreso")
-                )
+            with gr.Tab("📊 Modelos"):
+                gr.Markdown("## Información de los Modelos")
 
-            # ========================================
-            # TAB 4: Información Modelo Manuscrito
-            # ========================================
-            with gr.Tab("ℹ️ Modelo Manuscrito ✍️"):
-                handwriting_info = gr.Markdown(
-                    value=ocr.get_model_info("Texto Manuscrito")
-                )
+                with gr.Row():
+                    with gr.Column():
+                        with gr.Accordion("Modelo Texto Impreso", open=True):
+                            gr.Markdown(ocr.get_model_info("Texto Impreso"))
 
-            # ========================================
-            # TAB 5: Comparativa
-            # ========================================
-            with gr.Tab("⚖️ Comparativa"):
-                comparison_info = gr.Markdown(
-                    value=ocr.get_comparison()
-                )
+                    with gr.Column():
+                        with gr.Accordion("Modelo Texto Manuscrito", open=True):
+                            gr.Markdown(ocr.get_model_info("Texto Manuscrito"))
 
-            # ========================================
-            # TAB 6: Información General
-            # ========================================
-            with gr.Tab("📖 Sobre el Proyecto"):
-                gr.Markdown("""
-                ## 🎓 Proyecto Final - Inteligencia Artificial
+                with gr.Accordion("Comparativa de Modelos", open=False):
+                    gr.Markdown(ocr.get_comparison())
 
-                **Asignatura:** 051 - Inteligencia Artificial
-                **Objetivo:** Sistema OCR profesional con Transfer Learning
+            with gr.Tab("📖 Proyecto"):
+                with gr.Row():
+                    with gr.Column():
+                        gr.Markdown("""
+                        ## Proyecto Final - IA
 
-                ---
+                        **Asignatura:** 051 - Inteligencia Artificial
 
-                ### 🏗️ Arquitectura Técnica
+                        **Objetivo:** Sistema OCR con Deep Learning
+                        (sin librerías OCR externas como Tesseract)
 
-                #### CRNN (Convolutional Recurrent Neural Network)
+                        ---
 
-                Arquitectura estado del arte para OCR que combina:
+                        ### Arquitectura CRNN
 
-                1. **CNN (Convolutional Neural Network)**
-                   - 5 bloques convolucionales
-                   - Extracción automática de características visuales
-                   - Detecta bordes, texturas, formas de letras
-                   - Reducción progresiva: 64×256 → 512×64 features
+                        | Componente | Función | Detalles |
+                        |------------|---------|----------|
+                        | **CNN** | Extracción visual | 5 bloques conv. |
+                        | **RNN** | Secuencias | 3 LSTM bidireccionales |
+                        | **CTC** | Alineación | Sin segmentación manual |
 
-                2. **RNN (Recurrent Neural Network)**
-                   - 3 capas LSTM bidireccionales
-                   - Modela secuencias de izquierda a derecha
-                   - Captura contexto entre caracteres
-                   - 512 unidades ocultas por capa
+                        **Parámetros:** ~22M entrenables
+                        """)
 
-                3. **CTC Loss (Connectionist Temporal Classification)**
-                   - Alineación automática texto-imagen
-                   - No requiere segmentación manual
-                   - Permite longitudes variables
+                    with gr.Column():
+                        gr.Markdown("""
+                        ### Transfer Learning
 
-                **Total:** ~22 millones de parámetros entrenables
+                        1. Entrenamiento con texto impreso sintético (100k imágenes)
+                        2. Fine-tuning con manuscrito real (IAM Database, 96k palabras)
 
-                ---
+                        **Beneficios:**
+                        - Convergencia 40% más rápida
+                        - Mejor generalización
 
-                ### 📊 Datasets de Entrenamiento
+                        ---
 
-                #### Modelo Impreso 🖨️
-                - **115,000 imágenes** generadas sintéticamente
-                - 50+ tipografías diferentes
-                - Augmentations realistas
-                - Resultado: **94% precisión (CER 0.0609)**
+                        ### Referencias
 
-                #### Modelo Manuscrito ✍️
-                - **IAM Handwriting Database** (96,456 palabras)
-                - 657 escritores diferentes
-                - Variabilidad real de estilos
-                - **Transfer Learning** desde modelo impreso
-                - Resultado: **90% precisión (CER 0.1005)**
+                        - IAM Database: Marti & Bunke (2002)
+                        - CTC Loss: Graves et al. (2006)
+                        - CRNN: Shi et al. (2015)
+                        - Transfer Learning: Yosinski et al. (2014)
+                        """)
 
-                ---
+                with gr.Row():
+                    with gr.Column():
+                        with gr.Accordion("Requisitos Técnicos", open=False):
+                            gr.Markdown("""
+                            **Software:** Python 3.8+, PyTorch 2.0+, OpenCV, Gradio
 
-                ### 🔬 Estrategia: Transfer Learning
+                            **Hardware:** CPU 4+ cores, 8GB RAM, GPU opcional (10x más rápido)
 
-                **¿Por qué Transfer Learning?**
+                            **Velocidad:** ~0.5s/imagen (CPU) | ~0.05s/imagen (GPU)
+                            """)
 
-                En vez de entrenar el modelo manuscrito desde cero, aprovechamos el conocimiento del modelo impreso:
+                    with gr.Column():
+                        with gr.Accordion("Posibles Mejoras", open=False):
+                            gr.Markdown("""
+                            - Attention Mechanism
+                            - Beam Search Decoding
+                            - Language Model
+                            - Detección de Líneas
+                            - Modelo Ensemble
+                            """)
 
-                1. **Fase 1:** Entrenar con texto impreso (más fácil)
-                   - El modelo aprende qué es una letra, bordes, curvas
-                   - 94% de precisión en 50 épocas
-
-                2. **Fase 2:** Fine-tuning con manuscrito
-                   - CNN congelado épocas 1-15 (solo RNN aprende)
-                   - CNN descongelado épocas 16-35 (ajuste fino completo)
-                   - 90% de precisión en 35 épocas
-
-                **Ventajas demostradas:**
-                - ⚡ 2-3x más rápido que entrenar desde cero
-                - 📈 +6.5% mejor precisión final
-                - 💪 Mejor generalización
-
-                ---
-
-                ### 💻 Requisitos Técnicos
-
-                **Software:**
-                - Python 3.8+
-                - PyTorch 2.0+
-                - OpenCV, Albumentations
-                - Gradio (interfaz)
-
-                **Hardware Recomendado:**
-                - CPU: 4+ cores
-                - RAM: 8GB mínimo
-                - GPU: Opcional (10x más rápido)
-                - Disco: 500MB para modelos
-
-                **Velocidad de Inferencia:**
-                - CPU: ~0.5 segundos/imagen
-                - GPU: ~0.05 segundos/imagen
-
-                ---
-
-                ### 📈 Resultados Académicos
-
-                **Comparativa con Papers (IAM Words):**
-
-                | Método | Año | CER | Nuestro Resultado |
-                |--------|-----|-----|-------------------|
-                | Graves et al. (LSTM) | 2009 | 0.18 | ✅ Mejor (0.10) |
-                | Bluche et al. (CNN-RNN) | 2017 | 0.13 | ✅ Mejor (0.10) |
-                | Puigcerver (Gated CNN) | 2017 | 0.10 | ✅ Igual (0.10) |
-
-                **Hemos alcanzado estado del arte académico** 🏆
-
-                ---
-
-                ### 🚀 Posibles Mejoras Futuras
-
-                1. **Attention Mechanism**
-                   - Mejorar enfoque en regiones relevantes
-                   - +2-3% precisión esperada
-
-                2. **Beam Search Decoding**
-                   - Explorar múltiples hipótesis
-                   - Mejor manejo de ambigüedades
-
-                3. **Language Model**
-                   - Corrección ortográfica contextual
-                   - Diccionario + n-gramas
-
-                4. **Detección de Líneas**
-                   - Procesar documentos completos
-                   - Segmentación automática
-
-                5. **Multi-idioma**
-                   - Árabe, chino, cirílico
-                   - Entrenamiento con datasets específicos
-
-                6. **Modelo Ensemble**
-                   - Combinar múltiples modelos
-                   - Votar predicciones
-
-                ---
-
-                ### 📚 Referencias
-
-                - **IAM Database:** Marti & Bunke (2002)
-                - **CTC:** Graves et al. (2006)
-                - **CRNN:** Shi et al. (2015)
-                - **Transfer Learning:** Yosinski et al. (2014)
-
-                ---
-
-                ### 📧 Créditos
-
-                **Proyecto Académico** - Trabajo Final IA
-                **Fecha:** Enero 2025
-                **Tecnologías:** PyTorch, Gradio, OpenCV, Albumentations
-                """)
-
-        # Footer
         gr.Markdown("""
         ---
-        <div style="text-align: center; color: #666;">
-            <p>💻 Desarrollado con PyTorch + Gradio | 🎓 Proyecto Académico - Inteligencia Artificial</p>
-            <p>🏆 Estado del Arte: 94% precisión (impreso) | 90% precisión (manuscrito)</p>
+        <div style="text-align: center; color: #666; font-size: 0.9em;">
+            Desarrollado con PyTorch + Gradio | Trabajo Final IA | Enero 2026
         </div>
         """)
 
-    return app
+    return app, custom_theme, custom_css
 
 # ============================================================
 # MAIN
@@ -892,36 +806,26 @@ def create_interface(ocr):
 def main():
     """Función principal"""
 
-    print("\n" + "="*70)
-    print("🚀 APLICACIÓN OCR DUAL")
-    print("   Texto Impreso + Texto Manuscrito")
-    print("="*70)
+    print("\n" + "="*60)
+    print("  OCR DUAL - Texto Impreso + Manuscrito")
+    print("="*60)
 
     # Inicializar interfaz
     ocr = DualOCRInterface()
 
     # Crear app
-    app = create_interface(ocr)
+    app, custom_theme, custom_css = create_interface(ocr)
 
-    # Lanzar
-    print("\n" + "="*70)
-    print("✅ APLICACIÓN LISTA")
-    print("="*70)
-    print("\n📱 Abriendo navegador...")
-    print("   URL: http://localhost:7860")
-    print("\n💡 Características:")
-    print("   🖨️  Modelo Impreso: 94% precisión")
-    print("   ✍️  Modelo Manuscrito: 90% precisión")
-    print("   📚 Procesamiento por lotes")
-    print("   📊 Métricas detalladas")
-    print("\n⌨️  Presiona Ctrl+C para detener\n")
+    print("\n  URL: http://localhost:7860")
+    print("  Ctrl+C para detener\n")
 
     app.launch(
         server_name="0.0.0.0",
         server_port=7860,
         share=False,  # True para link público
         show_error=True,
-        theme=gr.themes.Soft()
+        theme=custom_theme,
+        css=custom_css
     )
 
 if __name__ == "__main__":
