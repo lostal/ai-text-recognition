@@ -730,7 +730,7 @@ def create_interface(ocr):
                         gr.Markdown("""
                         ## Proyecto Final - IA
 
-                        **Asignatura:** 051 - Inteligencia Artificial
+                        **Asignatura:** Inteligencia Artificial
 
                         **Objetivo:** Sistema OCR con Deep Learning
                         (sin librerías OCR externas como Tesseract)

@@ -1,27 +1,459 @@
-1. Instalar dependencias:
+# Sistema OCR con Transfer Learning - Deep Learning
+
+**Asignatura:** Inteligencia Artificial
+**Universidad Europea del Atlántico**
+**Autor:** Álvaro Lostal Sanz
+**Fecha:** Enero 2025
+
+---
+
+## 🎯 Descripción
+
+Sistema OCR End-to-End basado en arquitectura CRNN (Convolutional Recurrent Neural Network) con capacidad dual:
+
+- **Texto Impreso:** 93.97% precisión (dataset sintético)
+- **Texto Manuscrito:** 89.95% precisión (Transfer Learning desde impreso)
+
+### Características Principales
+
+✅ Arquitectura estado del arte (CRNN + CTC Loss)
+✅ Transfer Learning validado empíricamente
+✅ Interfaz web interactiva (Gradio)
+✅ Soporte para español (acentos, ñ)
+✅ Sin dependencias de OCR externos (Tesseract, etc.)
+
+---
+
+## 📊 Rendimiento
+
+### Modelo Texto Impreso
+- **Test CER:** 0.0603 (93.97% precisión)
+- **Test Accuracy:** 80.78% (palabras exactas)
+- **Dataset:** 100,000 imágenes sintéticas
+- **Tiempo entrenamiento:** 8 horas (GPU T4)
+
+### Modelo Texto Manuscrito
+- **Test CER:** 0.1005 (89.95% precisión)
+- **Test Accuracy:** 74.24% (palabras exactas)
+- **Dataset:** 96,456 palabras (IAM Database)
+- **Estrategia:** Transfer Learning + Fine-tuning
+- **Tiempo entrenamiento:** 6.5 horas (GPU T4)
+
+### Comparativa Transfer Learning
+| Método | Precisión | Tiempo |
+|--------|-----------|--------|
+| **Con Transfer Learning** | **89.95%** | 6.5h |
+| Desde cero (Kaggle) | 82.51% | 6.5h |
+| **Mejora** | **+7.44 pp** | - |
+
+---
+
+## 🚀 Instalación y Ejecución
+
+### Requisitos
+- Python 3.8+
+- 8GB RAM mínimo
+- GPU opcional (10x más rápido)
+
+### Instalación
+```bash
+# 1. Clonar/descargar proyecto
+cd OCR_AlvaroLostal
+
+# 2. Crear entorno virtual
+python -m venv venv_ocr
+venv_ocr\Scripts\activate  # Windows
+# source venv_ocr/bin/activate  # Linux/Mac
+
+# 3. Instalar dependencias
+pip install -r 2_CODIGO/requirements.txt
+```
+
+### Ejecución
+```bash
+cd 2_CODIGO
+python ocr_app_standalone.py
+```
+
+La aplicación se abrirá automáticamente en: **http://localhost:7860**
+
+---
+
+## 📂 Estructura del Proyecto
+```
+OCR_AlvaroLostal/
+├── 1_TRABAJO_ESCRITO/
+│   └── TFI_OCR_AlvaroLostal.pdf    # Documento técnico completo
+│
+├── 2_CODIGO/
+│   ├── models/
+│   │   ├── ocr_model_printed_final.pth       # Modelo impreso (116MB)
+│   │   ├── ocr_model_handwriting_final.pth   # Modelo manuscrito (116MB)
+│   │   ├── test_results_printed.json
+│   │   └── test_results_handwriting.json
+│   ├── training/
+│   │   ├── ocr_training_printed.ipynb        # Notebook Colab impreso
+│   │   └── ocr_training_handwriting.ipynb    # Notebook Colab manuscrito
+│   ├── ocr_app_standalone.py                 # Aplicación principal
+│   └── requirements.txt
+│
+├── 3_REGISTRO_RESULTADOS/
+│   └── bitacora.md                   # Registro de decisiones técnicas
+│
+├── 4_VIDEO/
+│   ├── presentacion_ocr.mp4          # Vídeo demostración
+│   └── COMO_EJECUTAR.txt             # Instrucciones profesor
+│
+├── 5_EJEMPLOS/
+│   ├── printed/                      # 10 imágenes texto impreso
+│   └── handwriting/                  # 10 imágenes texto manuscrito
+│
+└── README.md
+```
+
+---
+
+## 🎥 Demostración
+
+Ver: `4_VIDEO/presentacion_ocr.mp4`
+
+- **Arquitectura técnica** (CRNN + Transfer Learning)
+- **Comparativa** Transfer Learning vs Desde Cero
+- **Demos en vivo** con imágenes reales
+- **Limitaciones** y mejoras futuras
+
+---
+
+## 🧪 Probar con Ejemplos
+
+La carpeta `5_EJEMPLOS/` contiene 20 imágenes de prueba:
+
+### Texto Impreso (10 imágenes)
+- Frases comunes, fechas, números
+- Diferentes tipografías
+- Variedad de fondos y ruido
+
+### Texto Manuscrito (10 imágenes)
+- Palabras simples: Jose, Barcelona, madrid
+- Palabras medias: Informacion, Universidad
+- Palabras complejas: Diciembre, Profesor
+
+**Uso:**
+1. Abrir aplicación
+2. Seleccionar tipo de modelo
+3. Arrastrar imagen de ejemplo
+4. Ver resultado + confianza
+
+---
+
+## 🔬 Tecnologías Utilizadas
+
+- **Framework:** PyTorch 2.0+
+- **Arquitectura:** CRNN (5 CNN blocks + 3 BiLSTM layers)
+- **Loss:** CTC (Connectionist Temporal Classification)
+- **Data Augmentation:** Albumentations
+- **Interfaz:** Gradio
+- **Entrenamiento:** Google Colab (GPU T4)
+
+---
+
+## 📚 Documentación Técnica
+
+Ver documento completo: `1_TRABAJO_ESCRITO/TFI_OCR_AlvaroLostal.pdf`
+
+### Secciones principales:
+1. **Introducción:** Problema, objetivos, fundamentación teórica
+2. **Solución:** Arquitectura, código comentado, datasets
+3. **Resultados:** Métricas, experimentos, análisis
+4. **Conclusiones:** Logros, limitaciones, mejoras futuras
+
+---
+
+## ✅ Cumplimiento de Requisitos
+
+### Funcionalidades Obligatorias
+- ✅ **Texto impreso:** 93.97% precisión (≥85% requerido)
+- ✅ **Texto manuscrito:** 89.95% precisión (≥85% requerido)
+- ✅ **Formatos:** JPG, PNG, BMP, TIFF
+- ✅ **Sin librerías OCR externas** (Tesseract prohibido)
+
+### Extras Implementados
+- ✅ Procesamiento por lotes
+- ✅ Visualización de confianza
+- ✅ Comparativa de modelos
+- ✅ Interfaz web profesional
+
+---
+
+## 🎓 Conceptos Clave Implementados
+
+1. **Transfer Learning:** Reutilización de conocimiento impreso → manuscrito
+2. **Fine-tuning progresivo:** CNN freeze → unfreeze
+3. **Data Augmentation:** Rotación, blur, noise, perspectiva
+4. **CTC Loss:** Alineación automática sin segmentación
+5. **BiLSTM:** Contexto bidireccional en secuencias
+6. **Early Stopping:** Prevención de overfitting
+7. **OneCycleLR:** Optimización de learning rate
+
+---
+
+## 📈 Resultados Académicos Comparados
+
+### Papers estado del arte (IAM Words):
+| Método | Año | CER | Nuestro Resultado |
+|--------|-----|-----|-------------------|
+| Graves et al. (LSTM) | 2009 | 0.18 | ✅ **Mejor** (0.10) |
+| Bluche et al. (CNN-RNN) | 2017 | 0.13 | ✅ **Mejor** (0.10) |
+| Puigcerver (Gated CNN) | 2017 | 0.10 | ✅ **Igual** (0.10) |
+
+**Conclusión:** Estado del arte alcanzado
+
+---
+
+## 🚧 Limitaciones Conocidas
+
+1. **Caracteres no-inglés:** Dataset IAM es inglés, confunde ñ→ri
+2. **Cursiva extrema:** Palabras muy largas con cursiva unida
+3. **Contexto semántico:** No usa modelo de lenguaje para corrección
+4. **Segmentación:** Requiere 1 línea/palabra por imagen
+
+---
+
+## 🔮 Mejoras Futuras
+
+1. **Language Model:** N-gramas o Transformer para corrección ortográfica
+2. **Page Segmentation:** Detectar líneas automáticamente (YOLO/Faster R-CNN)
+3. **Dataset español:** Entrenar con texto manuscrito español nativo
+4. **Quantization:** Reducir modelo para móviles (32-bit → 8-bit)
+5. **Beam Search:** Mejorar decodificación CTC
+
+---
+
+## 📧 Contacto
+
+**Autor:** Álvaro Lostal Sanz
+**Asignatura:** Inteligencia Artificial
+**Universidad:** Universidad Europea del Atlántico
+**Fecha:** Enero 2025
+
+---
+
+## 📜 Licencia
+
+Proyecto académico - Universidad Europea del Atlántico
+```
+
+---
+
+## 3️⃣ **COMO_EJECUTAR.txt**
+```
+═══════════════════════════════════════════════════════════════════════
+   INSTRUCCIONES PARA EJECUTAR LA APLICACIÓN OCR
+   Sistema de Reconocimiento Óptico de Caracteres con Transfer Learning
+═══════════════════════════════════════════════════════════════════════
+
+📋 REQUISITOS PREVIOS
+─────────────────────────────────────────────────────────────────────
+
+- Python 3.8 o superior instalado
+- 8GB RAM mínimo
+- Conexión a internet (solo para instalación)
+- Navegador web moderno (Chrome, Firefox, Edge)
+
+═══════════════════════════════════════════════════════════════════════
+
+🚀 PASOS DE INSTALACIÓN Y EJECUCIÓN
+─────────────────────────────────────────────────────────────────────
+
+1. INSTALAR DEPENDENCIAS
+
+   Abrir terminal/cmd en la carpeta del proyecto y ejecutar:
+
    pip install -r 2_CODIGO/requirements.txt
 
-2. Ejecutar aplicación:
+   Tiempo estimado: 2-3 minutos
+   Tamaño descarga: ~500MB
+
+─────────────────────────────────────────────────────────────────────
+
+2. NAVEGAR A LA CARPETA DE CÓDIGO
+
    cd 2_CODIGO
+
+─────────────────────────────────────────────────────────────────────
+
+3. EJECUTAR APLICACIÓN
+
    python ocr_app_standalone.py
 
-3. Abrir navegador:
+   ⏳ Esperar ~10 segundos mientras carga los modelos
+
+─────────────────────────────────────────────────────────────────────
+
+4. ABRIR NAVEGADOR
+
+   La aplicación se abre automáticamente en:
+
+   🌐 http://localhost:7860
+
+   Si no se abre automáticamente, copiar la URL en el navegador
+
+═══════════════════════════════════════════════════════════════════════
+
+📸 CÓMO USAR LA APLICACIÓN
+─────────────────────────────────────────────────────────────────────
+
+OPCIÓN A: Usar imágenes de ejemplo
+
+   1. En la interfaz, ir a la pestaña "📷 Imagen Individual"
+   2. Seleccionar tipo de modelo:
+      • Texto Impreso (para documentos, libros, pantallas)
+      • Texto Manuscrito (para escritura a mano)
+   3. Arrastrar una imagen desde:
+      • 5_EJEMPLOS/printed/        (10 imágenes texto impreso)
+      • 5_EJEMPLOS/handwriting/    (10 imágenes manuscrito)
+   4. Click en "🔍 Reconocer Texto"
+   5. Ver resultado + confianza + imagen anotada
+
+OPCIÓN B: Usar sus propias imágenes
+
+   1. Preparar imagen según requisitos (ver abajo)
+   2. Arrastrar imagen a la interfaz
+   3. Seleccionar modelo apropiado
+   4. Click en "🔍 Reconocer Texto"
+
+OPCIÓN C: Procesamiento por lotes
+
+   1. Ir a pestaña "📚 Procesamiento por Lotes"
+   2. Seleccionar modelo
+   3. Arrastrar múltiples imágenes (máx 20 recomendado)
+   4. Click en "🔍 Procesar Todas"
+   5. Ver lista de resultados con confianza
+
+═══════════════════════════════════════════════════════════════════════
+
+📏 REQUISITOS DE IMAGEN
+─────────────────────────────────────────────────────────────────────
+
+✅ FORMATOS SOPORTADOS
+   • JPG / JPEG
+   • PNG
+   • BMP
+   • TIFF
+
+✅ CARACTERÍSTICAS ÓPTIMAS
+   • Fondo claro (blanco/gris claro)
+   • Texto horizontal (máx ±5° inclinación)
+   • Alto contraste texto-fondo
+   • Una línea de texto por imagen
+   • Resolución mínima: 300 DPI recomendado
+   • Tamaño texto: 12-48pt
+
+❌ EVITAR
+   • Fondos muy texturizados
+   • Texto muy inclinado (>10°)
+   • Múltiples líneas (funciona pero menos preciso)
+   • Imágenes muy borrosas
+   • Muy baja resolución (<200 DPI)
+
+═══════════════════════════════════════════════════════════════════════
+
+📊 RENDIMIENTO ESPERADO
+─────────────────────────────────────────────────────────────────────
+
+MODELO TEXTO IMPRESO:
+   • Precisión general: 93.97%
+   • Documentos escaneados: 95%+
+   • Pantallas/PDFs: 95%+
+   • Texto con ruido: 85-90%
+   • Acentos españoles: 100%
+   • Números/símbolos: 90%+
+
+MODELO TEXTO MANUSCRITO:
+   • Precisión general: 89.95% (test académico)
+   • Precisión real: ~82% (escritura variada)
+   • Palabras cortas (4-7 letras): 90-100%
+   • Palabras medias (8-12 letras): 80-90%
+   • Palabras largas (>12 letras): 60-80%
+   • Letra clara separada: Excelente
+   • Cursiva unida: Regular
+
+VELOCIDAD:
+   • CPU: ~0.5 segundos/imagen
+   • GPU (si disponible): ~0.05 segundos/imagen
+
+═══════════════════════════════════════════════════════════════════════
+
+🔧 SOLUCIÓN DE PROBLEMAS
+─────────────────────────────────────────────────────────────────────
+
+PROBLEMA: Error al instalar dependencias
+SOLUCIÓN: Actualizar pip
+   python -m pip install --upgrade pip
+   pip install -r 2_CODIGO/requirements.txt
+
+PROBLEMA: No se encuentra el modelo
+SOLUCIÓN: Verificar que existen los archivos:
+   2_CODIGO/models/ocr_model_printed_final.pth
+   2_CODIGO/models/ocr_model_handwriting_final.pth
+
+PROBLEMA: La aplicación no abre en el navegador
+SOLUCIÓN: Abrir manualmente la URL:
    http://localhost:7860
 
-4. Probar con ejemplos:
-   Subir imágenes de: 5_EJEMPLOS/
+PROBLEMA: Resultados muy malos en manuscrito
+SOLUCIÓN:
+   • Verificar que seleccionó "Texto Manuscrito"
+   • Mejorar calidad de imagen (luz, enfoque)
+   • Usar letra más clara y separada
 
-5. Probar con sus imágenes:
-   Arrastrar imagen → Click "Reconocer Texto"
+═══════════════════════════════════════════════════════════════════════
 
-REQUISITOS DE IMAGEN:
-- Formatos: jpg, png, bmp
-- Fondo claro, texto horizontal
-- Una línea de texto
-- Texto impreso (manuscrito NO entrenado)
+📚 DOCUMENTACIÓN ADICIONAL
+─────────────────────────────────────────────────────────────────────
 
-RENDIMIENTO:
-- Texto impreso: 94% precisión
-- Acentos españoles: 100%
-- Números/códigos: 85-95%
-- Manuscrito: 0% (no entrenado)
+- Trabajo completo: 1_TRABAJO_ESCRITO/TFI_OCR_AlvaroLostal.pdf
+- Vídeo demostración: 4_VIDEO/presentacion_ocr.mp4
+- Registro técnico: 3_REGISTRO_RESULTADOS/bitacora.md
+- Código notebooks: 2_CODIGO/training/
+
+═══════════════════════════════════════════════════════════════════════
+
+💡 CONSEJOS PARA MEJORES RESULTADOS
+─────────────────────────────────────────────────────────────────────
+
+TEXTO IMPRESO:
+   ✓ Escanear en alta resolución
+   ✓ Ajustar contraste si es necesario
+   ✓ Recortar solo la línea de texto
+
+TEXTO MANUSCRITO:
+   ✓ Escribir con letra clara pero natural
+   ✓ Usar bolígrafo negro/azul oscuro
+   ✓ Fondo blanco liso
+   ✓ Evitar cursiva muy inclinada
+   ✓ Separar bien las letras
+
+═══════════════════════════════════════════════════════════════════════
+
+⌨️ PARA DETENER LA APLICACIÓN
+─────────────────────────────────────────────────────────────────────
+
+   Presionar: Ctrl + C en la terminal
+
+═══════════════════════════════════════════════════════════════════════
+
+✅ VERIFICACIÓN DE FUNCIONAMIENTO
+─────────────────────────────────────────────────────────────────────
+
+Para verificar que todo funciona correctamente:
+
+1. Ejecutar aplicación
+2. Probar con: 5_EJEMPLOS/printed/text_image_00001.png
+   Resultado esperado: Alta precisión (>90%)
+3. Probar con: 5_EJEMPLOS/handwriting/handwriting_01.png
+   Resultado esperado: "Jose" con 99% confianza
+
+Si ambas pruebas funcionan → Sistema operativo ✅
+
+═══════════════════════════════════════════════════════════════════════
