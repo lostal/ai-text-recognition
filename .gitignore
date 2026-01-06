@@ -7,3 +7,6 @@ venv_ocr/
 # Cache Python y Jupyter
 __pycache__/
 .ipynb_checkpoints/
+
+# Video
+*.mp4
